@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Claude IDE config
+.claude/
+
+# Empty directories
+lib/
