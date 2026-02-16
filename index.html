@@ -24,6 +24,23 @@
         <!-- Section Title -->
         <div id="section-title" class="hidden"></div>
 
+        <!-- Layer Toggle Buttons -->
+        <div id="layer-toggles">
+            <button id="toggle-automation" class="layer-toggle-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+                <span>Automation</span>
+            </button>
+            <button id="toggle-safety" class="layer-toggle-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Safety</span>
+            </button>
+        </div>
+
         <!-- Legend Panel -->
         <div id="legend-panel">
             <div class="legend-header">
@@ -34,7 +51,7 @@
         </div>
     </div>
 
-    <!-- Modal Popup for Level 3 -->
+    <!-- Info Panel (slides in from right) -->
     <div id="modal-overlay" class="hidden">
         <div id="modal-content">
             <button id="modal-close" class="modal-close-btn">
@@ -42,7 +59,7 @@
                     <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
             </button>
-            <div id="modal-3d-viewer"></div>
+            <div id="modal-product-header"></div>
             <div id="modal-info">
                 <h2 id="modal-title"></h2>
                 <p id="modal-description"></p>

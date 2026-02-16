@@ -176,22 +176,18 @@ html, body {
     flex-shrink: 0;
 }
 
-/* Modal Overlay - Dark theme */
+/* Info Panel - Right-side slide-in */
 #modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
     z-index: 100;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease;
 }
 
 #modal-overlay.visible {
@@ -200,35 +196,36 @@ html, body {
 }
 
 #modal-overlay.hidden {
-    display: flex !important;
+    display: block !important;
     opacity: 0;
     pointer-events: none;
 }
 
 #modal-content {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 66%;
+    max-width: 800px;
+    height: 100%;
     background: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 14px;
-    width: 90%;
-    max-width: 900px;
-    height: 80%;
-    max-height: 600px;
+    border-left: 1px solid #444;
     display: flex;
+    flex-direction: column;
     overflow: hidden;
-    position: relative;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-    transform: scale(0.9) translateY(20px);
-    transition: transform 0.3s ease;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.5);
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #modal-overlay.visible #modal-content {
-    transform: scale(1) translateY(0);
+    transform: translateX(0);
 }
 
 .modal-close-btn {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 20px;
+    right: 20px;
     width: 40px;
     height: 40px;
     border: none;
@@ -251,46 +248,72 @@ html, body {
     color: rgba(255, 255, 255, 0.6);
 }
 
-#modal-3d-viewer {
-    flex: 1;
-    min-width: 50%;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-    position: relative;
+/* Product header with icon */
+#modal-product-header {
+    padding: 40px 40px 24px;
+    border-left: 4px solid #e67e22;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
 }
 
-#modal-3d-viewer canvas {
-    width: 100% !important;
-    height: 100% !important;
+.product-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 8px;
+}
+
+.product-icon svg {
+    width: 48px;
+    height: 48px;
+}
+
+.product-type-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 #modal-info {
     flex: 1;
-    padding: 36px;
+    padding: 0 40px 40px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    background: #2a2a2a;
 }
 
 #modal-title {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 600;
     color: white;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
+    line-height: 1.2;
 }
 
 #modal-description {
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.7;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 22px;
+    margin-bottom: 28px;
 }
 
 #modal-features {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 #modal-features li {
@@ -298,7 +321,16 @@ html, body {
     align-items: flex-start;
     gap: 12px;
     font-size: 14px;
+    line-height: 1.5;
     color: rgba(255, 255, 255, 0.8);
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+#modal-features li:hover {
+    background: rgba(255, 255, 255, 0.06);
 }
 
 #modal-features li::before {
@@ -307,7 +339,7 @@ html, body {
     height: 8px;
     background: var(--brand-red);
     border-radius: 50%;
-    margin-top: 5px;
+    margin-top: 6px;
     flex-shrink: 0;
 }
 
@@ -399,6 +431,54 @@ html, body {
     border-top: 5px solid rgba(255, 255, 255, 0.95);
 }
 
+/* Layer Toggle Buttons */
+#layer-toggles {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.layer-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.layer-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+}
+
+.layer-toggle-btn.active {
+    background: rgba(0, 170, 255, 0.3);
+    border-color: rgba(0, 170, 255, 0.5);
+    color: white;
+}
+
+.layer-toggle-btn.active svg {
+    color: #00aaff;
+}
+
+.layer-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
 /* Touch-friendly adjustments */
 @media (hover: none) and (pointer: coarse) {
     #back-button {
@@ -447,23 +527,3 @@ html, body {
     }
 }
 
-/* Camera controls hint */
-.camera-hint {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    padding: 10px 18px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.camera-hint.visible {
-    opacity: 1;
-}

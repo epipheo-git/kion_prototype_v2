@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { COLORS } from '../config/warehouseData.js';
+import { computeSpotlightPositions } from '../config/warehouseLayout.js';
 
 export class SceneManager {
     constructor(container) {
@@ -63,12 +64,12 @@ export class SceneManager {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
-        this.controls.maxPolarAngle = Math.PI / 2.2; // Prevent going below ground
-        this.controls.minDistance = 20;
-        this.controls.maxDistance = 120;
         this.controls.target.set(0, 0, 0);
-        this.controls.enablePan = true;
-        this.controls.panSpeed = 0.5;
+
+        // Lock perspective: disable all user interaction
+        this.controls.enableRotate = false;
+        this.controls.enablePan = false;
+        this.controls.enableZoom = false;
     }
 
     createLighting() {
@@ -98,17 +99,8 @@ export class SceneManager {
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0xa8a8a8, 0.5);
         this.scene.add(hemiLight);
 
-        // Spotlight effects for even warehouse lighting coverage
-        const spotlightPositions = [
-            { x: -30, z: -20 },
-            { x: 0, z: -20 },
-            { x: 30, z: -20 },
-            { x: -30, z: 10 },
-            { x: 0, z: 10 },
-            { x: 30, z: 10 },
-            { x: -30, z: 35 },
-            { x: 30, z: 35 }
-        ];
+        // Spotlight positions derived from section layout
+        const spotlightPositions = computeSpotlightPositions();
 
         spotlightPositions.forEach(pos => {
             const spotlight = new THREE.SpotLight(0xffffff, 0.8);

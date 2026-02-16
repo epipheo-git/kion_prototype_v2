@@ -82,6 +82,9 @@ class WarehouseExperience {
         // Setup input callbacks
         this.setupInputCallbacks();
 
+        // Setup layer toggle buttons
+        this.setupLayerToggles();
+
         // Set initial interactive objects
         this.updateInteractiveObjects();
 
@@ -248,6 +251,25 @@ class WarehouseExperience {
             this.navigationState.closeDetail();
             this.inputHandler.setEnabled(true);
         };
+    }
+
+    setupLayerToggles() {
+        const automationBtn = document.getElementById('toggle-automation');
+        const safetyBtn = document.getElementById('toggle-safety');
+
+        if (automationBtn) {
+            automationBtn.addEventListener('click', () => {
+                const active = this.warehouseBuilder.toggleAutomation();
+                automationBtn.classList.toggle('active', active);
+            });
+        }
+
+        if (safetyBtn) {
+            safetyBtn.addEventListener('click', () => {
+                const active = this.warehouseBuilder.toggleSafety();
+                safetyBtn.classList.toggle('active', active);
+            });
+        }
     }
 
     setupInputCallbacks() {
