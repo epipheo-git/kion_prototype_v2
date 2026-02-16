@@ -329,6 +329,9 @@ export class WarehouseBuilder {
         if (this.fullPortfolioBuilder) {
             this.fullPortfolioBuilder.updateAnimations(time);
         }
+        if (this.layerManager) {
+            this.layerManager.update(time);
+        }
     }
 
     getWarehouseGroup() {

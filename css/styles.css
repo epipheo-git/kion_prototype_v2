@@ -464,13 +464,45 @@ html, body {
 }
 
 .layer-toggle-btn.active {
-    background: rgba(0, 170, 255, 0.3);
-    border-color: rgba(0, 170, 255, 0.5);
+    background: rgba(0, 170, 255, 0.35);
+    border-color: rgba(0, 170, 255, 0.6);
     color: white;
+    box-shadow: 0 0 12px rgba(0, 170, 255, 0.4), inset 0 0 8px rgba(0, 170, 255, 0.1);
 }
 
 .layer-toggle-btn.active svg {
-    color: #00aaff;
+    color: #00ccff;
+}
+
+/* Pulsing dot indicator when active */
+.layer-toggle-btn.active::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #00ccff;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: togglePulse 2s ease-in-out infinite;
+}
+
+/* Safety button gets red glow when active */
+#toggle-safety.active {
+    background: rgba(255, 50, 50, 0.35);
+    border-color: rgba(255, 50, 50, 0.6);
+    box-shadow: 0 0 12px rgba(255, 50, 50, 0.4), inset 0 0 8px rgba(255, 50, 50, 0.1);
+}
+
+#toggle-safety.active svg {
+    color: #ff5555;
+}
+
+#toggle-safety.active::before {
+    background: #ff5555;
+}
+
+@keyframes togglePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
 }
 
 .layer-toggle-btn svg {

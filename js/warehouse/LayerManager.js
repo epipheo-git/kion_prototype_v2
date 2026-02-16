@@ -3,10 +3,11 @@ import * as THREE from 'three';
 /**
  * LayerManager — Toggle-able visual overlays for Automation and Safety layers.
  *
- * Automation layer: adds sensor bars, LIDAR dots, warning beacons, and "MATIC"
- * badge meshes as children of each referenced vehicle group.
+ * Automation layer: large ground-level detection rings, sensor arcs, glowing
+ * beacon columns, and MATIC halo rings on each tracked vehicle.
  *
- * Safety layer: adds translucent colored floor zones (danger / caution / safe).
+ * Safety layer: translucent colored floor zones (danger / caution / safe)
+ * with animated pulsing on danger areas.
  */
 export class LayerManager {
     constructor(warehouseGroup, materials) {
@@ -15,11 +16,19 @@ export class LayerManager {
 
         // Automation overlay state
         this.automationActive = false;
-        this.automationOverlays = []; // { parent: THREE.Group, meshes: THREE.Object3D[] }
+        this.automationOverlays = []; // { parent, meshes }
+
+        // Animation tracking arrays (subsets for per-frame updates)
+        this.automationRings = [];
+        this.automationArcs = [];
+        this.automationBeacons = [];
+        this.automationGlows = [];
 
         // Safety zone state
         this.safetyActive = false;
         this.safetyZoneMeshes = [];
+        this.dangerZoneMeshes = [];
+        this.dangerBorderMeshes = [];
     }
 
     // ================================================================
@@ -28,7 +37,7 @@ export class LayerManager {
 
     /**
      * Create automation overlays for a set of vehicle groups.
-     * @param {Map<string, THREE.Group>} vehicleRefs - Map of vehicle id → THREE.Group
+     * @param {Map<string, THREE.Group>} vehicleRefs
      */
     initAutomationOverlays(vehicleRefs) {
         vehicleRefs.forEach((vehicleGroup, id) => {
@@ -43,82 +52,117 @@ export class LayerManager {
     /**
      * Creates one set of automation overlay meshes and attaches them to a vehicle.
      * All meshes start hidden (visible = false).
+     * Dimensions are in vehicle LOCAL space (will be scaled 1.4x by vehicle group).
      */
     createOverlaySet(vehicleGroup) {
         const meshes = [];
 
-        // Determine vehicle bounds for positioning overlays
-        // We'll place overlays relative to the vehicle group's local space
-        // The vehicle models are already scaled via group.scale
-
-        // 1. Sensor bar across the front (cyan bar)
-        const sensorBar = new THREE.Mesh(
-            new THREE.BoxGeometry(1.6, 0.12, 0.12),
-            new THREE.MeshStandardMaterial({
-                color: 0x00aaff,
-                emissive: 0x0066aa,
-                emissiveIntensity: 0.6,
+        // 1. Ground detection ring — large cyan ring on floor around vehicle
+        const ring = new THREE.Mesh(
+            new THREE.RingGeometry(3.5, 4.2, 64),
+            new THREE.MeshBasicMaterial({
+                color: 0x00ccff,
                 transparent: true,
-                opacity: 0.9
+                opacity: 0.55,
+                side: THREE.DoubleSide,
+                depthWrite: false
             })
         );
-        sensorBar.position.set(0, 0.4, 2.0);
-        sensorBar.visible = false;
-        vehicleGroup.add(sensorBar);
-        meshes.push(sensorBar);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(0, 0.15, 0);
+        ring.renderOrder = 997;
+        ring.visible = false;
+        vehicleGroup.add(ring);
+        meshes.push(ring);
+        this.automationRings.push(ring);
 
-        // 2. LIDAR dots (3 cyan dots in arc at front)
-        const lidarDotGeom = new THREE.SphereGeometry(0.08, 8, 8);
-        const lidarDotMat = new THREE.MeshStandardMaterial({
-            color: 0x00ffff,
-            emissive: 0x00aaaa,
-            emissiveIntensity: 0.8
-        });
+        // 2. Inner detection fill — subtle fill inside ring
+        const fill = new THREE.Mesh(
+            new THREE.CircleGeometry(3.5, 64),
+            new THREE.MeshBasicMaterial({
+                color: 0x00aaff,
+                transparent: true,
+                opacity: 0.12,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            })
+        );
+        fill.rotation.x = -Math.PI / 2;
+        fill.position.set(0, 0.14, 0);
+        fill.renderOrder = 996;
+        fill.visible = false;
+        vehicleGroup.add(fill);
+        meshes.push(fill);
 
-        [[-0.5, 0.6, 2.2], [0, 0.8, 2.4], [0.5, 0.6, 2.2]].forEach(([dx, dy, dz]) => {
-            const dot = new THREE.Mesh(lidarDotGeom, lidarDotMat);
-            dot.position.set(dx, dy, dz);
-            dot.visible = false;
-            vehicleGroup.add(dot);
-            meshes.push(dot);
-        });
+        // 3. Sensor sweep arc — 120° arc in front of vehicle
+        const arc = new THREE.Mesh(
+            new THREE.RingGeometry(2.0, 5.0, 32, 1,
+                Math.PI / 2 - Math.PI / 3,   // thetaStart: centered forward
+                2 * Math.PI / 3              // thetaLength: 120 degrees
+            ),
+            new THREE.MeshBasicMaterial({
+                color: 0x00ffaa,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            })
+        );
+        arc.rotation.x = -Math.PI / 2;
+        arc.position.set(0, 0.16, 1.5);
+        arc.renderOrder = 997;
+        arc.visible = false;
+        vehicleGroup.add(arc);
+        meshes.push(arc);
+        this.automationArcs.push(arc);
 
-        // 3. Warning beacon on top (orange glow)
-        const beaconGeom = new THREE.CylinderGeometry(0.15, 0.15, 0.2, 12);
-        const beaconMat = new THREE.MeshStandardMaterial({
-            color: 0xff8800,
-            emissive: 0xff6600,
-            emissiveIntensity: 0.7,
-            transparent: true,
-            opacity: 0.85
-        });
-        const beacon = new THREE.Mesh(beaconGeom, beaconMat);
-        beacon.position.set(0, 2.2, -0.3);
+        // 4. Beacon column — tall glowing pillar on top of vehicle
+        const beacon = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.5, 1.5, 16),
+            new THREE.MeshStandardMaterial({
+                color: 0x00ccff,
+                emissive: 0x00aaff,
+                emissiveIntensity: 1.0,
+                transparent: true,
+                opacity: 0.85
+            })
+        );
+        beacon.position.set(0, 3.0, 0);
         beacon.visible = false;
         vehicleGroup.add(beacon);
         meshes.push(beacon);
+        this.automationBeacons.push(beacon);
 
-        // 4. "MATIC" badge (small plane on the side of vehicle)
-        const badgeGeom = new THREE.PlaneGeometry(0.8, 0.3);
-        const badgeMat = new THREE.MeshBasicMaterial({
-            color: 0x00aaff,
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide
-        });
-        const badge = new THREE.Mesh(badgeGeom, badgeMat);
-        badge.position.set(0.72, 0.9, 0);
-        badge.rotation.y = Math.PI / 2;
-        badge.visible = false;
-        vehicleGroup.add(badge);
-        meshes.push(badge);
+        // 5. Beacon glow sphere — soft halo bloom
+        const glow = new THREE.Mesh(
+            new THREE.SphereGeometry(1.0, 16, 16),
+            new THREE.MeshBasicMaterial({
+                color: 0x00ccff,
+                transparent: true,
+                opacity: 0.25,
+                depthWrite: false
+            })
+        );
+        glow.position.set(0, 3.5, 0);
+        glow.visible = false;
+        vehicleGroup.add(glow);
+        meshes.push(glow);
+        this.automationGlows.push(glow);
 
-        // Second badge on other side
-        const badge2 = badge.clone();
-        badge2.position.x = -0.72;
-        badge2.visible = false;
-        vehicleGroup.add(badge2);
-        meshes.push(badge2);
+        // 6. MATIC halo ring — horizontal ring at vehicle midsection
+        const halo = new THREE.Mesh(
+            new THREE.TorusGeometry(1.2, 0.15, 8, 32),
+            new THREE.MeshStandardMaterial({
+                color: 0x00aaff,
+                emissive: 0x0088cc,
+                emissiveIntensity: 0.8
+            })
+        );
+        halo.rotation.x = Math.PI / 2;
+        halo.position.set(0, 1.8, 0);
+        halo.visible = false;
+        vehicleGroup.add(halo);
+        meshes.push(halo);
 
         return meshes;
     }
@@ -146,74 +190,75 @@ export class LayerManager {
     /**
      * Create safety floor zones.
      * @param {Array<{x, z, width, depth, type}>} zoneDefinitions
-     *   type: 'danger' (red), 'caution' (yellow), 'safe' (green)
      */
     initSafetyZones(zoneDefinitions) {
         const zoneMaterials = {
             danger: new THREE.MeshBasicMaterial({
-                color: 0xff3333,
+                color: 0xff2222,
                 transparent: true,
-                opacity: 0.25,
+                opacity: 0.55,
                 depthWrite: false,
                 side: THREE.DoubleSide
             }),
             caution: new THREE.MeshBasicMaterial({
-                color: 0xffaa00,
+                color: 0xffbb00,
                 transparent: true,
-                opacity: 0.2,
+                opacity: 0.40,
                 depthWrite: false,
                 side: THREE.DoubleSide
             }),
             safe: new THREE.MeshBasicMaterial({
-                color: 0x33cc66,
+                color: 0x22dd55,
                 transparent: true,
-                opacity: 0.15,
+                opacity: 0.30,
                 depthWrite: false,
                 side: THREE.DoubleSide
             })
         };
 
         zoneDefinitions.forEach(zone => {
-            const material = zoneMaterials[zone.type] || zoneMaterials.caution;
+            const material = (zoneMaterials[zone.type] || zoneMaterials.caution).clone();
             const mesh = new THREE.Mesh(
                 new THREE.PlaneGeometry(zone.width, zone.depth),
                 material
             );
             mesh.rotation.x = -Math.PI / 2;
-            mesh.position.set(zone.x, 0.08, zone.z);
-            mesh.renderOrder = 998;
+            mesh.position.set(zone.x, 0.20, zone.z);
+            mesh.renderOrder = 1000;
             mesh.visible = false;
+            mesh.userData.zoneType = zone.type;
+            mesh.userData.isBorder = false;
 
             this.group.add(mesh);
             this.safetyZoneMeshes.push(mesh);
 
-            // Add striped border for danger zones
+            // Track danger zones separately for animation
             if (zone.type === 'danger') {
+                this.dangerZoneMeshes.push(mesh);
                 this.addDangerBorder(zone);
             }
         });
     }
 
     /**
-     * Add a striped border around a danger zone (yellow/black hazard stripes).
+     * Add a striped border around a danger zone.
      */
     addDangerBorder(zone) {
         const stripeMat = new THREE.MeshBasicMaterial({
-            color: 0xffcc00,
+            color: 0xffdd00,
             transparent: true,
-            opacity: 0.35,
+            opacity: 0.65,
             depthWrite: false,
             side: THREE.DoubleSide
         });
 
-        const borderWidth = 0.4;
+        const borderWidth = 1.5;
 
-        // Four border strips (top, bottom, left, right)
         const borders = [
             // Top
-            { x: zone.x, z: zone.z - zone.depth / 2, w: zone.width, d: borderWidth },
+            { x: zone.x, z: zone.z - zone.depth / 2, w: zone.width + borderWidth, d: borderWidth },
             // Bottom
-            { x: zone.x, z: zone.z + zone.depth / 2, w: zone.width, d: borderWidth },
+            { x: zone.x, z: zone.z + zone.depth / 2, w: zone.width + borderWidth, d: borderWidth },
             // Left
             { x: zone.x - zone.width / 2, z: zone.z, w: borderWidth, d: zone.depth },
             // Right
@@ -223,14 +268,18 @@ export class LayerManager {
         borders.forEach(b => {
             const mesh = new THREE.Mesh(
                 new THREE.PlaneGeometry(b.w, b.d),
-                stripeMat
+                stripeMat.clone()
             );
             mesh.rotation.x = -Math.PI / 2;
-            mesh.position.set(b.x, 0.09, b.z);
-            mesh.renderOrder = 999;
+            mesh.position.set(b.x, 0.22, b.z);
+            mesh.renderOrder = 1001;
             mesh.visible = false;
+            mesh.userData.zoneType = 'danger';
+            mesh.userData.isBorder = true;
+
             this.group.add(mesh);
             this.safetyZoneMeshes.push(mesh);
+            this.dangerBorderMeshes.push(mesh);
         });
     }
 
@@ -248,6 +297,61 @@ export class LayerManager {
         return this.safetyActive;
     }
 
+    // ================================================================
+    // ANIMATION UPDATE
+    // ================================================================
+
+    /**
+     * Per-frame update for animated overlays.
+     * Only runs calculations when the respective layer is active.
+     */
+    update(time) {
+        if (this.automationActive) {
+            const pulse = 0.55 + 0.15 * Math.sin(time * 0.003);
+            const glowPulse = 0.25 + 0.15 * Math.sin(time * 0.004);
+            const beaconIntensity = 0.7 + 0.3 * Math.sin(time * 0.005);
+
+            // Pulse detection rings
+            this.automationRings.forEach(ring => {
+                ring.material.opacity = pulse;
+            });
+
+            // Slowly rotate sensor arcs
+            this.automationArcs.forEach(arc => {
+                arc.rotation.z += 0.002;
+            });
+
+            // Pulse beacon emissive
+            this.automationBeacons.forEach(beacon => {
+                beacon.material.emissiveIntensity = beaconIntensity;
+            });
+
+            // Pulse beacon glow
+            this.automationGlows.forEach(glow => {
+                glow.material.opacity = glowPulse;
+            });
+        }
+
+        if (this.safetyActive) {
+            const dangerPulse = 0.50 + 0.10 * Math.sin(time * 0.004);
+            const borderPulse = 0.625 + 0.125 * Math.sin(time * 0.004);
+
+            // Pulse danger zones
+            this.dangerZoneMeshes.forEach(mesh => {
+                mesh.material.opacity = dangerPulse;
+            });
+
+            // Pulse danger borders
+            this.dangerBorderMeshes.forEach(mesh => {
+                mesh.material.opacity = borderPulse;
+            });
+        }
+    }
+
+    // ================================================================
+    // CLEANUP
+    // ================================================================
+
     dispose() {
         // Remove automation overlays from parents
         this.automationOverlays.forEach(({ parent, meshes }) => {
@@ -258,6 +362,10 @@ export class LayerManager {
             });
         });
         this.automationOverlays = [];
+        this.automationRings = [];
+        this.automationArcs = [];
+        this.automationBeacons = [];
+        this.automationGlows = [];
 
         // Remove safety zones
         this.safetyZoneMeshes.forEach(mesh => {
@@ -266,5 +374,7 @@ export class LayerManager {
             if (mesh.material) mesh.material.dispose();
         });
         this.safetyZoneMeshes = [];
+        this.dangerZoneMeshes = [];
+        this.dangerBorderMeshes = [];
     }
 }
